@@ -150,6 +150,7 @@ then TFTP the `.bin` to DrayBoot's upgrade prompt — it writes the primary
 
 Once wrapped (out.bin):
 
+- rename out.bin to v2860_uboot.bin (it needs .bin extension and the filename cannot have '0' at the end as it triggers different processing path)
 - connect UART cable (3.3v)
 - start router with RESET button pressed
 - set you laptop address to 192.168.1.10

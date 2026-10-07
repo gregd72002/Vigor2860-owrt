@@ -6,7 +6,8 @@ DrayTek bootloader (DrayBoot)** — DrayBoot stays in place on SPI-NOR and loads
 this U-Boot from NAND, so the device is never bricked and the vendor recovery
 path is preserved.
 
-Considering Ethernet is not fully working, the only way to uplaod a kernel is through UART. See
+Considering Ethernet is not fully working, the only way to uplaod a kernel is through UART.
+
 ## Status
 
 | Component | State |
@@ -145,7 +146,16 @@ DrayBoot will accept it: a 0x100-byte header (`word0` = total length), the
 payload padded to `0x80000`, and a trailing one's-complement checksum. Wrap it,
 then TFTP the `.bin` to DrayBoot's upgrade prompt — it writes the primary
 (`0x1380000`) and backup (`0x3380000`) firmware slots and boots the new image.
-(The wrapping tool is separate from this repo.)
+
+
+Once wrapped (out.bin):
+
+- connect UART cable (3.3v)
+- start router with RESET button pressed
+- set you laptop address to 192.168.1.10
+- from laptop: tftp 192.168.1.1; binary; put out.bin
+- done
+
 
 ## License
 

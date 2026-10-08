@@ -131,26 +131,28 @@
 };
 
 &gswip_mdio {
-	phy11: ethernet-phy@11 {
-		reg = <0x11>;
+	phy1c: ethernet-phy@1c {
+		reg = <0x1c>;
 	};
-	phy13: ethernet-phy@13 {
-		reg = <0x13>;
+	phy1e: ethernet-phy@1e {
+		reg = <0x1e>;
 	};
 };
 
 &gswip_ports {
+	/* PHY 0x1c (MII0) -> lan1 */
 	port@2 {
 		reg = <2>;
 		label = "lan1";
 		phy-mode = "internal";
-		phy-handle = <&phy11>;
+		phy-handle = <&phy1c>;
 	};
+	/* PHY 0x1e (MII1) -> wan */
 	port@4 {
 		reg = <4>;
-		label = "lan2";
+		label = "wan";
 		phy-mode = "internal";
-		phy-handle = <&phy13>;
+		phy-handle = <&phy1e>;
 	};
 };
 

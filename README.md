@@ -10,9 +10,16 @@ The OpenWrt-side of the Vigor 2860 port (the U-Boot board patch lives in
   kernel + rootfs and self-installs to NAND on first boot.
 
 > **Status:** OpenWrt boots from NAND, persists (UBI overlay), USB works.
-> **Ethernet is NOT yet working** — the 6 LAN ports are behind an external
-> **QCA8337** switch that isn't driven yet (no `qca8k`, no DTS node). Only the
-> VR9-internal paths come up, and they pass no data. See "Ethernet / TODO".
+> **Ethernet is working on 2 ports (WAN and LAN 1) — the remaining 5 LAN ports are behind an external
+> **QCA8337** switch that isn't driven yet (no `qca8k`, no DTS node)
+> **DSL** not working
+
+Compiled image: openwrt-lantiq-xrx200-draytek_vigor2860-squashfs-factory.bin
+- Hold reset while powering the router to start TFTP load
+- Connect ethernet cable to LAN 1 (other work for TFTP but won't work for Openwrt)
+- on host: tftp 192.168.1.1; binary; put openwrt-lantiq-xrx200-draytek_vigor2860-squashfs-factory.bin
+
+To revert to stock - download the official DrayTek firmware
 
 ## Prerequisites
 
@@ -36,6 +43,7 @@ files/
 snippets/
   vr9.mk.device               the Device/draytek_vigor2860 block to paste
   uboot-lantiq.Makefile       the two uboot-lantiq Makefile edits to paste
+  02_network.edits            
 ```
 
 ## Install
@@ -148,26 +156,32 @@ Console: **`ttyLTQ1`** in DrayBoot/U-Boot, **`ttyLTQ0`** in Linux.
 These must match in three places: this layout, the DTS `partition@…` nodes,
 and U-Boot's `bootcmd`.
 
-## Ethernet / TODO
+## Ethernet
 
-Not working yet. Topology (from the PCB marking + the DrayOS boot log):
+**2 of 7 ports working** via the VR9 internal GPHYs:
 
-- SoC VR9 GSWIP has 2 internal GPHYs at MDIO **0x1c / 0x1e** (per DrayOS).
-- The 6 LAN jacks are behind an external **QCA8337-AL3C** switch, connected to
-  the VR9 over an internal MII/RGMII link (DrayOS "E5 MII0/1" driver).
-- WAN (port 0) is a separate path with its own MAC (`...:a2`), handled by the
-  vendor "tantos" / EWAN mechanism.
+- `lan1` — PHY at MDIO 0x1c, GSWIP port 2
+- `wan`  — PHY at MDIO 0x1e, GSWIP port 4
 
-In OpenWrt so far: the DTS binds PHYs at 0x11/0x13 (which report garbage IDs
-`0x55555555`/`0x0` — they're the undriven QCA8337, not real PHYs), so ports
-"link" but pass no data. To finish Ethernet:
+Key facts (for anyone debugging this):
+- The internal GPHYs are at MDIO **0x1c / 0x1e** (from the DrayOS boot log),
+  NOT 0x11/0x13 — those addresses respond with garbage because they're the
+  undriven QCA8337.
+- They must sit on GSWIP ports **2 and 4**: the xrx200 gswip driver only
+  advertises `phy-mode = "internal"` on ports 2/3/4/6 (see
+  `gswip_xrx200_phylink_get_caps`), so ports 0/1 fail validation with -EINVAL.
+- **DSL is disabled** in `02_network` for this board (ethernet WAN). Without
+  that, `lantiq_setup_dsl_helper` forces `wan=dsl0/pppoe` and overrides the
+  ethernet config.
 
-1. build `kmod-qca8k` into the image,
-2. describe the QCA8337 as a cascaded DSA switch in the DTS (VR9 RGMII trunk
-   port with `fixed-link` → `qca8k` node with its ports),
-3. handle the separate WAN path.
+### TODO
+- **5 LAN jacks behind a QCA8337-AL3C switch** — not driven yet. Needs
+  `kmod-qca8k`, a cascaded DSA node in the DTS (VR9 RGMII trunk →
+  qca8k), and the separate WAN path. No existing lantiq board cascades qca8k.
+- **MAC address is random each boot** — no NVMEM source wired. The base MAC
+  (00:1D:AA:5C:48:A0) lives in the DrayBoot SPI-NOR bdinfo @ 0x3FFF8; reading
+  it from the drayboot-vendor partition is a future improvement.
 
-No existing lantiq board cascades a qca8k switch, so this is new work.
 
 ## License
 

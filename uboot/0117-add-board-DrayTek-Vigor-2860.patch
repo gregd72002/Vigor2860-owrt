@@ -296,10 +296,10 @@ Index: u-boot-2013.10/board/draytek/vigor2860/vigor2860.c
 +}
 +
 +static const struct ltq_eth_port_config eth_port_config[] = {
-+	/* GMAC2: internal GPHY0 (PHY11G) -- confirmed live at MDIO 0x11 */
-+	{ 2, 0x11, LTQ_ETH_PORT_PHY, PHY_INTERFACE_MODE_GMII },
-+	/* GMAC4: internal GPHY1 (PHY11G) -- confirmed live at MDIO 0x13 */
-+	{ 4, 0x13, LTQ_ETH_PORT_PHY, PHY_INTERFACE_MODE_GMII },
++	/* GMAC2: internal GPHY0 (PHY11G) -- confirmed live at MDIO 0x1c */
++	{ 2, 0x1c, LTQ_ETH_PORT_PHY, PHY_INTERFACE_MODE_GMII },
++	/* GMAC4: internal GPHY1 (PHY11G) -- confirmed live at MDIO 0x1e */
++	{ 4, 0x1e, LTQ_ETH_PORT_PHY, PHY_INTERFACE_MODE_GMII },
 +};
 +
 +static const struct ltq_eth_board_config eth_board_config = {

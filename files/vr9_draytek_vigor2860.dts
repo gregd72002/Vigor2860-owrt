@@ -1,0 +1,183 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+/*
+ * DrayTek Vigor 2860 (Lantiq VRX268 / VR9 / xRX200)
+ *
+ * Chainloaded by stock DrayBoot: DrayBoot copies U-Boot to CodeStart
+ * 0x80020000 and jumps; U-Boot reads the kernel from NAND 0x1480000 and
+ * boots it. This DTS owns the full NAND partition map.
+ *
+ * Confirmed hardware (DrayBoot/DrayOS logs + U-Boot bring-up):
+ *   SoC   : VR9 / xRX200 (VRX268 v1.2), MIPS 34Kc, 600 MHz CPU / 300 MHz bus
+ *   DRAM  : 128 MiB; top 1 MiB reserved by DrayOS (CP1) -> excluded below
+ *   NAND  : Toshiba TC58NVG0S3ETA00, 128 MiB (ID 0x98/0xd1),
+ *           2 KiB page, 64 B OOB, 128 KiB erase block; soft ECC
+ *   UART  : asc1 = ttyLTQ1 @ 115200 (same console DrayBoot/U-Boot use)
+ *   GPHY  : phy11g firmware, A2x stepping (v1.4+ silicon)
+ *   MAC   : base 00:1D:AA:5C:48:A0 (DrayBoot SPI-NOR bdinfo @ 0x3FFF8)
+ *
+ * NAND node mirrors vr9_zyxel_p-2812hnu-f3.dts (this board's template):
+ * same controller (lantiq,nand-xway, cs1, soft ECC) - only the partition
+ * map differs, to fit DrayBoot's slots. DrayBoot lives on SPI-NOR, which
+ * it owns, so no NOR flash@0 node is described here.
+ *
+ * Still under investigation (BEST GUESS, do not trust yet):
+ *   - ethernet port/PHY mapping; CPU-side GMAC TX not yet working. The
+ *     likely fix is the GSWIP CPU port (port@6) / xMII setup, not present
+ *     here yet - that is the open bring-up item.
+ *   - the four external-switch jacks (behind an undescribed xMII switch)
+ *   - USB VBUS GPIO, PCIe reset GPIO
+ */
+
+/dts-v1/;
+
+#include "vr9.dtsi"
+
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/mips/lantiq_rcu_gphy.h>
+
+/ {
+	compatible = "draytek,vigor2860", "lantiq,xway", "lantiq,vr9";
+	model = "DrayTek Vigor 2860";
+
+	chosen {
+		/* DrayBoot passes no cmdline; set it all here. Console is
+		 * ttyLTQ1 (asc1) to match DrayBoot/U-Boot - the old DTS had
+		 * ttyLTQ0 in bootargs while stdout-path pointed at asc1, so
+		 * kernel output went to the wrong UART and looked like a hang. */
+		bootargs = "console=ttyLTQ0,115200 loglevel=8";
+		stdout-path = &asc1;
+	};
+
+	memory@0 {
+		device_type = "memory";
+		reg = <0x0 0x7f00000>;	/* 127 MiB; top 1 MiB = DrayOS CP1, left alone */
+	};
+};
+
+/* ---------------- NAND (Toshiba TC58NVG0S3ETA00, 128 MiB) ----------------
+ * Controller node copied verbatim from p2812hnu-f3 (lantiq,nand-xway on
+ * CS1, soft ECC - the ECC scheme must match what DrayBoot/U-Boot wrote or
+ * Linux sees phantom ECC errors reading back our own kernel/ubi).
+ * Partitions are DIRECT children of flash@1 (no fixed-partitions wrapper -
+ * that wrapper is for NOR; the nand-xway driver parses partition@* here),
+ * with offsets absolute from NAND start.
+ */
+&localbus {
+	flash@1 {
+		compatible = "lantiq,nand-xway";
+		lantiq,cs = <1>;
+		bank-width = <2>;
+		reg = <1 0x0 0x2000000>;
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		pinctrl-0 = <&nand_pins>, <&nand_cs1_pins>;
+		pinctrl-names = "default";
+
+		nand-use-soft-ecc-engine;
+
+		/* DrayTek config / bdinfo region - never written by us */
+		partition@0 {
+			label = "drayboot-vendor";
+			reg = <0x0000000 0x1380000>;
+			read-only;
+		};
+
+		/* DrayBoot primary firmware slot: 0x100 hdr + U-Boot + pad.
+		 * board_late_init() shrinks word0 to 0x80104 on first boot;
+		 * immutable thereafter, so read-only keeps sysupgrade/overlay
+		 * out of DrayBoot's checksum region. */
+		partition@1380000 {
+			label = "u-boot";
+			reg = <0x1380000 0x100000>;
+			read-only;
+		};
+
+		/* U-Boot: nand read 0x1480000 0x400000 ; bootm */
+		partition@1480000 {
+			label = "kernel";
+			reg = <0x1480000 0x400000>;
+		};
+
+		/* rootfs + overlay; ends at DrayBoot backup slot 0x3380000
+		 * so the backup recovery copy stays intact */
+		partition@1880000 {
+			label = "ubi";
+			reg = <0x1880000 0x1b00000>;
+		};
+	};
+};
+
+/* =====================================================================
+ * Ethernet  --  BEST GUESS, open bring-up item
+ * ---------------------------------------------------------------------
+ * VR9 has two internal gigabit PHYs. The six physical LAN jacks sit
+ * behind an external switch on an xMII port not described here yet.
+ * CPU-side GMAC TX is not working - most likely a missing/incorrect CPU
+ * port (port@6) / xMII setup, which belongs here once switch wiring is
+ * known. Ports labelled neutrally so tcpdump can map socket -> port.
+ * ===================================================================== */
+&gphy0 {
+	lantiq,gphy-mode = <GPHY_MODE_GE>;
+};
+
+&gphy1 {
+	lantiq,gphy-mode = <GPHY_MODE_GE>;
+};
+
+&gswip {
+	pinctrl-0 = <&mdio_pins>;
+	pinctrl-names = "default";
+};
+
+&gswip_mdio {
+	phy11: ethernet-phy@11 {
+		reg = <0x11>;
+	};
+	phy13: ethernet-phy@13 {
+		reg = <0x13>;
+	};
+};
+
+&gswip_ports {
+	port@2 {
+		reg = <2>;
+		label = "lan1";
+		phy-mode = "internal";
+		phy-handle = <&phy11>;
+	};
+	port@4 {
+		reg = <4>;
+		label = "lan2";
+		phy-mode = "internal";
+		phy-handle = <&phy13>;
+	};
+};
+
+/* ---------------- USB (both on-chip DWC2 controllers) ----------------
+ * No IDs needed. If a stick gets no power, a VBUS GPIO is missing: add a
+ * regulator-fixed and vbus-supply once the GPIO is found.
+ */
+&usb_phy0 {
+	status = "okay";
+};
+
+&usb0 {
+	status = "okay";
+};
+
+&usb_phy1 {
+	status = "okay";
+};
+
+&usb1 {
+	status = "okay";
+};
+
+/* ---------------- PCIe (lspci / possible Wi-Fi card) ----------------
+ * If dmesg shows link-up failures, a reset GPIO is needed:
+ *   reset-gpios = <&gpio N GPIO_ACTIVE_LOW>;
+ */
+&pcie0 {
+	status = "okay";
+};

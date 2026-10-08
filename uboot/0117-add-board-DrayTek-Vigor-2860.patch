@@ -333,7 +333,7 @@ Index: u-boot-2013.10/include/configs/vigor2860.h
 ===================================================================
 --- /dev/null
 +++ u-boot-2013.10/include/configs/vigor2860.h
-@@ -0,0 +1,81 @@
+@@ -0,0 +1,83 @@
 +/*
 + * Copyright (C) 2013 Luka Perkov <luka@openwrt.org>
 + *
@@ -367,7 +367,8 @@ Index: u-boot-2013.10/include/configs/vigor2860.h
 +
 +#define CONFIG_SYS_DRAM_PROBE
 +
-+#define CONFIG_SYS_BOOTM_LEN          0x1000000       /* 16 MB */
++#undef CONFIG_SYS_BOOTM_LEN
++#define CONFIG_SYS_BOOTM_LEN          0x2000000       /* 32 MB */
 +
 +/* Environment */
 +#if defined(CONFIG_SYS_BOOT_NANDSPL)
@@ -414,6 +415,7 @@ Index: u-boot-2013.10/include/configs/vigor2860.h
 +#define CONFIG_BOOTCOMMAND \
 +    "nand read ${loadaddr} 0x1480000 0x400000 && bootm ${loadaddr}"
 +
++
 +#endif /* __CONFIG_H */
 Index: u-boot-2013.10/boards.cfg
 ===================================================================
@@ -424,3 +426,41 @@ Index: u-boot-2013.10/boards.cfg
  Orphan  powerpc     mpc8xx         -           -               mbx8xx              MBX860T                              -                                                                                                                                 -
  Orphan  powerpc     mpc8xx         -           -               nx823               NX823                                -                                                                                                                                 -
 +Active	mips	mips32	vrx200	draytek	vigor2860	vigor2860_ram	vigor2860:SYS_BOOT_RAM	Gregory Dymarek
+Index: u-boot-2013.10/arch/mips/cpu/mips32/start.S
+===================================================================
+--- u-boot-2013.10.orig/arch/mips/cpu/mips32/start.S
++++ u-boot-2013.10/arch/mips/cpu/mips32/start.S
+@@ -123,8 +123,11 @@ reset:
+ 	la	t9, lowlevel_init
+ 	jalr	t9
+ 	 nop
++dd
++#endif
+ 
+-	/* Initialize caches... */
++	/* Initialize caches (needed even when chainloaded - DrayBoot leaves
++	 * the cache in a non-Linux state) */
+ 	la	t9, mips_cache_reset
+ 	jalr	t9
+ 	 nop
+@@ -132,7 +135,6 @@ reset:
+ 	/* ... and enable them */
+ 	li	t0, CONFIG_SYS_MIPS_CACHE_MODE
+ 	mtc0	t0, CP0_CONFIG
+-#endif
+ 
+ 	/* Set up temporary stack */
+ 	li	sp, CONFIG_SYS_SDRAM_BASE + CONFIG_SYS_INIT_SP_OFFSET
+Index: u-boot-2013.10/arch/mips/lib/bootm.c
+===================================================================
+--- u-boot-2013.10.orig/arch/mips/lib/bootm.c
++++ u-boot-2013.10/arch/mips/lib/bootm.c
+@@ -216,4 +216,6 @@ static void boot_jump_linux(bootm_header
+ 	/* we assume that the kernel is in place */
+ 	printf("\nStarting kernel ...\n\n");
+ 
++	flush_cache(images->os.load, CONFIG_SYS_BOOTM_LEN);
++
+ 	kernel(linux_argc, (ulong)linux_argv, (ulong)linux_env, linux_extra);
+ }
+ 

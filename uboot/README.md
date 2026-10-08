@@ -8,6 +8,11 @@ path is preserved.
 
 Considering Ethernet is not fully working, the only way to uplaod a kernel is through UART.
 
+v2860-draytek-uboot.bin should be fully complete and ready to TFTP into the router.
+It will overwrite NAND content (DrayOS). 
+This is reversable - TFTP original Vigor 2860 firmware from Draytek support website.
+ 
+
 ## Status
 
 | Component | State |

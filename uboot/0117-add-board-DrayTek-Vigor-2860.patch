@@ -126,7 +126,7 @@ Index: u-boot-2013.10/board/draytek/vigor2860/vigor2860.c
 ===================================================================
 --- /dev/null
 +++ u-boot-2013.10/board/draytek/vigor2860/vigor2860.c
-@@ -0,0 +1,202 @@
+@@ -0,0 +1,188 @@
 +/*
 + * Copyright (C) 2013 Luka Perkov <luka@openwrt.org>
 + *
@@ -296,10 +296,6 @@ Index: u-boot-2013.10/board/draytek/vigor2860/vigor2860.c
 +}
 +
 +static const struct ltq_eth_port_config eth_port_config[] = {
-+	/* GMAC2: internal GPHY0 (PHY11G) -- confirmed live at MDIO 0x1c */
-+	{ 2, 0x1c, LTQ_ETH_PORT_PHY, PHY_INTERFACE_MODE_GMII },
-+	/* GMAC4: internal GPHY1 (PHY11G) -- confirmed live at MDIO 0x1e */
-+	{ 4, 0x1e, LTQ_ETH_PORT_PHY, PHY_INTERFACE_MODE_GMII },
 +};
 +
 +static const struct ltq_eth_board_config eth_board_config = {
@@ -309,17 +305,7 @@ Index: u-boot-2013.10/board/draytek/vigor2860/vigor2860.c
 +
 +int board_eth_init(bd_t * bis)
 +{
-+	const enum ltq_gphy_clk clk = LTQ_GPHY_CLK_25MHZ_PLL0;
-+	const ulong fw_addr = 0x80FF0000;
-+
-+	ltq_gphy_phy11g_a2x_load(fw_addr);
-+
-+	ltq_cgu_gphy_clk_src(clk);
-+
-+	ltq_rcu_gphy_boot(0, fw_addr);
-+	ltq_rcu_gphy_boot(1, fw_addr);
-+
-+	return ltq_eth_initialize(&eth_board_config);
++	return 0;
 +}
 +
 +int misc_init_r(void)
@@ -455,7 +441,7 @@ Index: u-boot-2013.10/arch/mips/lib/bootm.c
 ===================================================================
 --- u-boot-2013.10.orig/arch/mips/lib/bootm.c
 +++ u-boot-2013.10/arch/mips/lib/bootm.c
-@@ -216,4 +216,6 @@ static void boot_jump_linux(bootm_header
+@@ -216,6 +216,8 @@ static void boot_jump_linux(bootm_header
  	/* we assume that the kernel is in place */
  	printf("\nStarting kernel ...\n\n");
  

@@ -1,0 +1,12 @@
+# Edits to: target/linux/lantiq/xrx200/base-files/lib/upgrade/platform.sh
+# ---------------------------------------------------------------------------
+# Add 	draytek,vigor2860 to existing group platform_do_upgrade()
+# It ensures sysupgrade uses NAND case for this board
+# ---------------------------------------------------------------------------
+
+	avm,fritz7490-micron|\
+	bt,homehub-v5a|\
+	draytek,vigor2860|\                                 # <-- ADD THIS LINE
+	zyxel,p-2812hnu-f1|\
+
+

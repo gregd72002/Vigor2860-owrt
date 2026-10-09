@@ -108,6 +108,31 @@
 	};
 };
 
+/* ---------------- SPI-NOR: DrayBoot factory parameters ----------------
+ * 256 KiB SPI flash. Factory MAC address at absolute offset 0x3fff8.
+ */
+&spi {
+	status = "okay";
+
+	flash@4 {
+		compatible = "jedec,spi-nor";
+		reg = <4>;
+		spi-max-frequency = <1000000>;
+
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			partition@0 {
+				label = "drayboot-spi";
+				reg = <0x0 0x40000>;
+				read-only;
+			};
+		};
+	};
+};
+
 /* =====================================================================
  * Ethernet  --  BEST GUESS, open bring-up item
  * ---------------------------------------------------------------------

@@ -1,6 +1,6 @@
 # Edits to: target/linux/lantiq/xrx200/base-files/etc/board.d/02_network
 #
-# Two additions to the shared lantiq xrx200 02_network script. This file is
+# Three additions to the shared lantiq xrx200 02_network script. This file is
 # NOT a drop-in — make these two edits to the existing OpenWrt file.
 #
 # NOTE: after editing, make sure NO backup file (02_network.orig, 02_network~,
@@ -44,3 +44,16 @@ lantiq_setup_dsl()
 	...
 	lantiq_setup_dsl_helper "$annex"
 }
+
+
+# ---------------------------------------------------------------------------
+# EDIT 3 — lantiq_setup_macs: add the board specific MAC initialisation
+# ---------------------------------------------------------------------------
+
+		;;
+	draytek,vigor2860)						# <-- ADD THIS
+		lan_mac=$(mtd_get_mac_binary "drayboot-spi" 0x3fff8)	# <-- ADD THIS
+		wan_mac=$(macaddr_add "$lan_mac" 2)			# <-- ADD THIS
+		;;							# <-- ADD THIS
+	avm,fritz3390|\
+

@@ -20,7 +20,7 @@ define Device/draytek_vigor2860
   IMAGES += factory.ubi factory.bin
   IMAGE/factory.ubi := append-ubi
   IMAGE/factory.bin := append-ubi | draytek-factory
-  DEVICE_PACKAGES := kmod-usb-dwc2
+  DEVICE_PACKAGES := kmod-usb-dwc2 kmod-ath10k ath10k-firmware-qca988x rt2800-pci-firmware kmod-rt2800-pci wpad-basic-mbedtls
 endef
 TARGET_DEVICES += draytek_vigor2860
 

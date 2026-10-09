@@ -126,7 +126,7 @@ Index: u-boot-2013.10/board/draytek/vigor2860/vigor2860.c
 ===================================================================
 --- /dev/null
 +++ u-boot-2013.10/board/draytek/vigor2860/vigor2860.c
-@@ -0,0 +1,188 @@
+@@ -0,0 +1,199 @@
 +/*
 + * Copyright (C) 2013 Luka Perkov <luka@openwrt.org>
 + *
@@ -305,12 +305,23 @@ Index: u-boot-2013.10/board/draytek/vigor2860/vigor2860.c
 +
 +int board_eth_init(bd_t * bis)
 +{
-+	return 0;
++	const enum ltq_gphy_clk clk = LTQ_GPHY_CLK_25MHZ_PLL0;
++	const ulong fw_addr = 0x80FF0000;
++
++	/* Load the GPHY firmware and boot the two internal GPHYs so they are
++	 * live on MDIO for Linux. The kernel's gswip gphy-fw loader faults on
++	 * this board, so U-Boot does it; we do NOT start U-Boot's own ethernet
++	 * (ltq_eth_initialize) - Linux owns ethernet. */
++	ltq_gphy_phy11g_a2x_load(fw_addr);
++	ltq_cgu_gphy_clk_src(clk);
++	ltq_rcu_gphy_boot(0, fw_addr);
++	ltq_rcu_gphy_boot(1, fw_addr);
++	return ltq_eth_initialize(&eth_board_config);
 +}
 +
 +int misc_init_r(void)
 +{
-+    puts("\n*** VIGOR MISC INIT ***\n");
++    puts("\n*** VIGOR MISC INITT ***\n");
 +    convert_drayboot_image();
 +    return 0;
 +}

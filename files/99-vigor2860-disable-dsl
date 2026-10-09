@@ -1,0 +1,7 @@
+#!/bin/sh
+# DrayTek Vigor 2860 uses ethernet WAN, not DSL. The dsl_control init script
+# otherwise runs at S97 and delays netifd (~25s) failing on annex config.
+[ "$(cat /tmp/sysinfo/board_name 2>/dev/null)" = "draytek,vigor2860" ] || exit 0
+/etc/init.d/dsl_control disable 2>/dev/null
+/etc/init.d/dsl_control stop 2>/dev/null
+exit 0

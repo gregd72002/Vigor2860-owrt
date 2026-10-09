@@ -128,6 +128,7 @@
 &gswip {
 	pinctrl-0 = <&mdio_pins>;
 	pinctrl-names = "default";
+	// FIRMWARE and some initial eth init expected to be loaded at uboot time. Moving it to here breaks things
 };
 
 &gswip_mdio {

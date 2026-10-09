@@ -40,6 +40,7 @@ files/
   vr9_draytek_vigor2860.dts   drop-in DTS (NAND partitions, soft ECC, ttyLTQ0)
   draytek_boot_wrap.py        wraps U-Boot+kernel+rootfs into a DrayBoot image
   vigor2860-u-boot.bin        prebuilt U-Boot the image recipe embeds (see note)
+  99-vigor2860-disable-dsl    disabled dsl on OpenWrt startup to speed up eth startup
 snippets/
   vr9.mk.device               the Device/draytek_vigor2860 block to paste
   uboot-lantiq.Makefile       the two uboot-lantiq Makefile edits to paste
@@ -73,6 +74,7 @@ cp files/vr9_draytek_vigor2860.dts \
 cp files/draytek_boot_wrap.py        scripts/
 chmod +x scripts/draytek_boot_wrap.py
 cp files/vigor2860-u-boot.bin        target/linux/lantiq/image/
+cp files/99-vigor2860-disable-dsl      target/linux/lantiq/xrx200/base-files/etc/uci-defaults/
 ```
 
 ### 4. Image recipe

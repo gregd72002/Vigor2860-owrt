@@ -126,7 +126,7 @@ Index: u-boot-2013.10/board/draytek/vigor2860/vigor2860.c
 ===================================================================
 --- /dev/null
 +++ u-boot-2013.10/board/draytek/vigor2860/vigor2860.c
-@@ -0,0 +1,199 @@
+@@ -0,0 +1,220 @@
 +/*
 + * Copyright (C) 2013 Luka Perkov <luka@openwrt.org>
 + *
@@ -135,6 +135,7 @@ Index: u-boot-2013.10/board/draytek/vigor2860/vigor2860.c
 +
 +#include <common.h>
 +#include <asm/gpio.h>
++#include <asm/io.h>
 +#include <asm/lantiq/eth.h>
 +#include <asm/lantiq/chipid.h>
 +#include <asm/lantiq/cpu.h>
@@ -168,6 +169,14 @@ Index: u-boot-2013.10/board/draytek/vigor2860/vigor2860.c
 +#define CONVERT_LEN        0x000A0000   /* 5 x 128 KiB, block-aligned, below kernel */
 +#define COMBINED_MIN       0x00100000   /* kernel starts here; smaller => not combined */
 +
++/*
++# VR9 GPIO ALTSEL1 for upper port (base 0x1e100b74; ALT1 = base+0x10 = 0x1e100b84).
++# Bit 11 = io43 (PORT_PIN 43-32). Sets the ALTSEL1 half of io43's MDIO mux;
++# io42 already muxed. pinctrl-xway sets io43 ALTSEL0 but omits ALTSEL1, so the
++# GSWIP external MDIO bus to the QCA8337 is dead from cold boot until this is set.
++# OR in bit 11 (leave other pins' bits untouched), before the kernel/qca8k probe.
++*/
++#define VR9_GPIO_REG_ADDR 0xbe100b84 //KSEG1
 +
 +static int convert_drayboot_image(void)
 +{
@@ -322,10 +331,22 @@ Index: u-boot-2013.10/board/draytek/vigor2860/vigor2860.c
 +int misc_init_r(void)
 +{
 +    puts("\n*** VIGOR MISC INITT ***\n");
++
++    // workaround for DrayBoot integrity check. Update the length in the header to the length of uboot only;
++    // needs to be done only once
 +    convert_drayboot_image();
++
++    //get QCA83773 to work
++    u32 reg = readl((void __iomem *)VR9_GPIO_REG_ADDR);
++    printf("Before: 0x%08x\n", reg);
++    reg |= 0x00000800;
++    writel(reg, (void __iomem *)VR9_GPIO_REG_ADDR);
++    printf("After:  0x%08x\n",
++    readl((void __iomem *)VR9_GPIO_REG_ADDR));
++
 +    return 0;
 +}
-+
++ 
 Index: u-boot-2013.10/include/configs/vigor2860.h
 ===================================================================
 --- /dev/null

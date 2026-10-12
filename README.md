@@ -12,16 +12,14 @@ The OpenWrt-side of the Vigor 2860 port (the U-Boot board patch lives in
 > **Status:** OpenWrt boots from NAND, persists (UBI overlay), USB works.
 > **Ethernet** is working on 2 ports (WAN and LAN 1) — the remaining 5 LAN ports are behind an external
 > **WiFi** is working for Vigor 2860ac, both radios 
-> **QCA8337** switch that isn't driven yet (no `qca8k`, no DTS node)
-> **GPIO** LEDS and Reset buttons and WPS
-> **DSL** not working
+> **QCA8337** is working in DSA mode 
+> **GPIO** LEDS and Reset buttons and WPS not configured
+> **DSL** not tested
 
 Compiled image: openwrt-lantiq-xrx200-draytek_vigor2860-squashfs-factory.bin
 - Hold reset while powering the router to start TFTP load
 - Connect ethernet cable to LAN 1 (other work for TFTP but won't work for Openwrt)
 - on host: tftp 192.168.1.1; binary; put openwrt-lantiq-xrx200-draytek_vigor2860-squashfs-factory.bin
-
-- for QSA to work, qca-switch need to be run after boot
 
 To revert to stock - download the official DrayTek firmware
 

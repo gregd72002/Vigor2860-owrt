@@ -13,7 +13,8 @@ The OpenWrt-side of the Vigor 2860 port (the U-Boot board patch lives in
 > **Ethernet** is working on 2 ports (WAN and LAN 1) — the remaining 5 LAN ports are behind an external
 > **WiFi** is working for Vigor 2860ac, both radios 
 > **QCA8337** is working in DSA mode 
-> **GPIO** LEDS and Reset buttons and WPS not configured
+> **GPIO** LEDS 
+> **USB** most likely not done yet 
 > **DSL** not tested
 
 Compiled image: openwrt-lantiq-xrx200-draytek_vigor2860-squashfs-factory.bin
@@ -162,10 +163,11 @@ and U-Boot's `bootcmd`.
 
 ## Ethernet
 
-**2 of 7 ports working** via the VR9 internal GPHYs:
+** All port working; 2 ports via the VR9 internal GPHYs and remaining 6 through QCA trunk (DSA):
 
 - `lan1` — PHY at MDIO 0x1c, GSWIP port 2
 - `wan`  — PHY at MDIO 0x1e, GSWIP port 4
+- `qca8337`- PHY at MDIO 0x10, GSWIP port 1
 
 Key facts (for anyone debugging this):
 - The internal GPHYs are at MDIO **0x1c / 0x1e** (from the DrayOS boot log),
@@ -180,7 +182,7 @@ Key facts (for anyone debugging this):
 
 ### TODO
 - **LEDS** — not controlled yet. The router has 9 LEDs
-- **Wifi Off button** 
+- **Wifi Off** button not tested 
 
 ## License
 

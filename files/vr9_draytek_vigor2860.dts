@@ -33,6 +33,7 @@
 #include "vr9.dtsi"
 
 #include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/input.h>
 #include <dt-bindings/mips/lantiq_rcu_gphy.h>
 
 / {
@@ -51,6 +52,18 @@
 	memory@0 {
 		device_type = "memory";
 		reg = <0x0 0x7f00000>;	/* 127 MiB; top 1 MiB = DrayOS CP1, left alone */
+	};
+
+	keys {
+		compatible = "gpio-keys-polled";
+		poll-interval = <100>;
+
+		reset {
+			label = "Reset button";
+			gpios = <&gpio 7 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_RESTART>;
+			debounce-interval = <60>;
+		};
 	};
 };
 

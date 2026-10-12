@@ -1,0 +1,31 @@
+#!/bin/sh /etc/rc.common
+START=21
+BUS=1e108000.switch-mii
+
+qwr() {
+  local R=$1 V=$2
+  local page=$(( R >> 9 )); local phy=$(( 0x10 | ((R >> 6) & 0x7) ))
+  local rl=$(( (R >> 1) & 0x1e )); local rh=$(( rl | 1 ))
+  local lo=$(( V & 0xffff )); local hi=$(( (V >> 16) & 0xffff ))
+  mdio $BUS phy 0x18 raw 0 $page >/dev/null
+  mdio $BUS phy $phy raw $rh $hi >/dev/null
+  mdio $BUS phy $phy raw $rl $lo >/dev/null
+}
+
+qrd0000() { mdio $BUS phy 0x18 raw 0 0 >/dev/null; mdio $BUS phy 0x10 raw 1; }
+
+qca_setup() {
+  # wait for MDIO/QCA to be reachable (chip id = 0x1302)
+  local i=0
+  while [ $i -lt 20 ]; do
+    [ "$(qrd0000)" = "0x1302" ] && break
+    sleep 1; i=$((i+1))
+  done
+  # order matters: pad -> flood -> MAC enable
+  qwr 0x0004 0x07600000    # RGMII uplink pad
+  qwr 0x0624 0x007f7f7f    # flood maps incl. port 0
+  qwr 0x007c 0x0000007e    # PORT0 MAC enable (last)
+}
+
+start() { qca_setup; }
+boot()  { qca_setup; }

@@ -3,10 +3,10 @@ MIPS: add board support for DrayTek Vigor 2860
 VR9/xRX200, RAM variant chainloaded by DrayBoot (TEXT_BASE 0xA0020000).
 Console + NAND working; ethernet link/RX up, CPU TX still TODO.
 
-Index: u-boot-2013.10/board/draytek/vigor2860/Makefile
+Index: source/board/draytek/vigor2860/Makefile
 ===================================================================
---- /dev/null
-+++ u-boot-2013.10/board/draytek/vigor2860/Makefile
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ source/board/draytek/vigor2860/Makefile	2026-10-12 14:17:22.281587007 +0000
 @@ -0,0 +1,27 @@
 +#
 +# Copyright (C) 2000-2011 Wolfgang Denk, DENX Software Engineering, wd@denx.de
@@ -35,10 +35,10 @@ Index: u-boot-2013.10/board/draytek/vigor2860/Makefile
 +sinclude $(obj).depend
 +
 +#########################################################################
-Index: u-boot-2013.10/board/draytek/vigor2860/config.mk
+Index: source/board/draytek/vigor2860/config.mk
 ===================================================================
---- /dev/null
-+++ u-boot-2013.10/board/draytek/vigor2860/config.mk
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ source/board/draytek/vigor2860/config.mk	2026-10-12 14:17:22.283587007 +0000
 @@ -0,0 +1,7 @@
 +#
 +# Copyright (C) 2012-2013 Daniel Schwierzeck, daniel.schwierzeck@gmail.com
@@ -47,10 +47,10 @@ Index: u-boot-2013.10/board/draytek/vigor2860/config.mk
 +#
 +
 +PLATFORM_CPPFLAGS += -I$(TOPDIR)/board/$(BOARDDIR)
-Index: u-boot-2013.10/board/draytek/vigor2860/ddr_settings.h
+Index: source/board/draytek/vigor2860/ddr_settings.h
 ===================================================================
---- /dev/null
-+++ u-boot-2013.10/board/draytek/vigor2860/ddr_settings.h
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ source/board/draytek/vigor2860/ddr_settings.h	2026-10-12 14:17:22.283587007 +0000
 @@ -0,0 +1,70 @@
 +/*
 + * Copyright (C) 2013 Luka Perkov <luka@openwrt.org>
@@ -122,11 +122,11 @@ Index: u-boot-2013.10/board/draytek/vigor2860/ddr_settings.h
 +#define	MC_CCR59_VALUE	0x7800301
 +#define	MC_CCR60_VALUE	0x7800301
 +#define	MC_CCR61_VALUE	0x4
-Index: u-boot-2013.10/board/draytek/vigor2860/vigor2860.c
+Index: source/board/draytek/vigor2860/vigor2860.c
 ===================================================================
---- /dev/null
-+++ u-boot-2013.10/board/draytek/vigor2860/vigor2860.c
-@@ -0,0 +1,220 @@
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ source/board/draytek/vigor2860/vigor2860.c	2026-10-12 14:18:03.362604012 +0000
+@@ -0,0 +1,230 @@
 +/*
 + * Copyright (C) 2013 Luka Perkov <luka@openwrt.org>
 + *
@@ -323,6 +323,16 @@ Index: u-boot-2013.10/board/draytek/vigor2860/vigor2860.c
 +	 * (ltq_eth_initialize) - Linux owns ethernet. */
 +	ltq_gphy_phy11g_a2x_load(fw_addr);
 +	ltq_cgu_gphy_clk_src(clk);
++
++	#define RCU_GF_MDIO_ADD  0xBF203044
++	#define GPHY_MDIO_MASK    0x00007C1F
++	u32 val = readl(RCU_GF_MDIO_ADD);
++	val &= ~GPHY_MDIO_MASK;
++	val |= (0x1C << 0);    /* desired GPHY0 MDIO ADDR - same as in DrayBoot */
++	val |= (0x1E << 10);   /* desired GPHY1 MDIO ADDR - same as in DrayBoot */
++	writel(val, RCU_GF_MDIO_ADD);
++
++
 +	ltq_rcu_gphy_boot(0, fw_addr);
 +	ltq_rcu_gphy_boot(1, fw_addr);
 +	return ltq_eth_initialize(&eth_board_config);
@@ -346,11 +356,11 @@ Index: u-boot-2013.10/board/draytek/vigor2860/vigor2860.c
 +
 +    return 0;
 +}
-+ 
-Index: u-boot-2013.10/include/configs/vigor2860.h
++
+Index: source/include/configs/vigor2860.h
 ===================================================================
---- /dev/null
-+++ u-boot-2013.10/include/configs/vigor2860.h
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ source/include/configs/vigor2860.h	2026-10-12 14:17:22.283587007 +0000
 @@ -0,0 +1,83 @@
 +/*
 + * Copyright (C) 2013 Luka Perkov <luka@openwrt.org>
@@ -435,20 +445,20 @@ Index: u-boot-2013.10/include/configs/vigor2860.h
 +
 +
 +#endif /* __CONFIG_H */
-Index: u-boot-2013.10/boards.cfg
+Index: source/boards.cfg
 ===================================================================
---- u-boot-2013.10.orig/boards.cfg
-+++ u-boot-2013.10/boards.cfg
-@@ -1255,3 +1255,4 @@ Orphan  powerpc     mpc8xx         -
+--- source.orig/boards.cfg	2026-10-12 14:17:04.589565013 +0000
++++ source/boards.cfg	2026-10-12 14:17:22.284587007 +0000
+@@ -1255,3 +1255,4 @@
  Orphan  powerpc     mpc8xx         -           -               mbx8xx              MBX                                  -                                                                                                                                 -
  Orphan  powerpc     mpc8xx         -           -               mbx8xx              MBX860T                              -                                                                                                                                 -
  Orphan  powerpc     mpc8xx         -           -               nx823               NX823                                -                                                                                                                                 -
 +Active	mips	mips32	vrx200	draytek	vigor2860	vigor2860_ram	vigor2860:SYS_BOOT_RAM	Gregory Dymarek
-Index: u-boot-2013.10/arch/mips/cpu/mips32/start.S
+Index: source/arch/mips/cpu/mips32/start.S
 ===================================================================
---- u-boot-2013.10.orig/arch/mips/cpu/mips32/start.S
-+++ u-boot-2013.10/arch/mips/cpu/mips32/start.S
-@@ -123,8 +123,11 @@ reset:
+--- source.orig/arch/mips/cpu/mips32/start.S	2026-10-12 14:17:04.589565013 +0000
++++ source/arch/mips/cpu/mips32/start.S	2026-10-12 14:17:22.284587007 +0000
+@@ -123,8 +123,11 @@
  	la	t9, lowlevel_init
  	jalr	t9
  	 nop
@@ -461,7 +471,7 @@ Index: u-boot-2013.10/arch/mips/cpu/mips32/start.S
  	la	t9, mips_cache_reset
  	jalr	t9
  	 nop
-@@ -132,7 +135,6 @@ reset:
+@@ -132,7 +135,6 @@
  	/* ... and enable them */
  	li	t0, CONFIG_SYS_MIPS_CACHE_MODE
  	mtc0	t0, CP0_CONFIG
@@ -469,11 +479,11 @@ Index: u-boot-2013.10/arch/mips/cpu/mips32/start.S
  
  	/* Set up temporary stack */
  	li	sp, CONFIG_SYS_SDRAM_BASE + CONFIG_SYS_INIT_SP_OFFSET
-Index: u-boot-2013.10/arch/mips/lib/bootm.c
+Index: source/arch/mips/lib/bootm.c
 ===================================================================
---- u-boot-2013.10.orig/arch/mips/lib/bootm.c
-+++ u-boot-2013.10/arch/mips/lib/bootm.c
-@@ -216,6 +216,8 @@ static void boot_jump_linux(bootm_header
+--- source.orig/arch/mips/lib/bootm.c	2026-10-12 14:17:04.589565013 +0000
++++ source/arch/mips/lib/bootm.c	2026-10-12 14:17:22.284587007 +0000
+@@ -216,6 +216,8 @@
  	/* we assume that the kernel is in place */
  	printf("\nStarting kernel ...\n\n");
  

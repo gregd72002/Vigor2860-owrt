@@ -21,6 +21,8 @@ Compiled image: openwrt-lantiq-xrx200-draytek_vigor2860-squashfs-factory.bin
 - Connect ethernet cable to LAN 1 (other work for TFTP but won't work for Openwrt)
 - on host: tftp 192.168.1.1; binary; put openwrt-lantiq-xrx200-draytek_vigor2860-squashfs-factory.bin
 
+- for QSA to work, qca-switch need to be run after boot
+
 To revert to stock - download the official DrayTek firmware
 
 ## Prerequisites

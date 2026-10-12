@@ -136,9 +136,8 @@ Outputs under `bin/targets/lantiq/xrx200/`:
 TFTP the **factory** image to DrayBoot (filename must **not** end in `0`):
 
 ```
-- connect UART (3.3 V), console = 115200
 - power on with the RESET button held
-- laptop -> 192.168.1.10
+- laptop -> 192.168.1.X (i.e. 192.168.1.2)
 - tftp 192.168.1.1 ; binary ; put <factory>.bin
 ```
 

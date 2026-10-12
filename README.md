@@ -179,13 +179,8 @@ Key facts (for anyone debugging this):
   ethernet config.
 
 ### TODO
-- **5 LAN jacks behind a QCA8337-AL3C switch** — not driven yet. Needs
-  `kmod-qca8k`, a cascaded DSA node in the DTS (VR9 RGMII trunk →
-  qca8k), and the separate WAN path. No existing lantiq board cascades qca8k.
-- **MAC address is random each boot** — no NVMEM source wired. The base MAC
-  (00:1D:AA:5C:48:A0) lives in the DrayBoot SPI-NOR bdinfo @ 0x3FFF8; reading
-  it from the drayboot-vendor partition is a future improvement.
-
+- **LEDS** — not controlled yet. The router has 9 LEDs
+- **Wifi Off button** 
 
 ## License
 

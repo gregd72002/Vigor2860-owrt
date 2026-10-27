@@ -1,0 +1,151 @@
+From: Gregory Dymarek <gregd72002@gmail.com>
+Subject: [PATCH] net: dsa: qca8k: use the 4-byte QCA header
+
+On the DrayTek Vigor 2860 the QCA8337 sits behind a GSWIP port, so frames
+from it carry the 8-byte GSWIP tag plus the 2-byte QCA header. With the
+xrx200 RX buffer at NET_IP_ALIGN, the IP header then ends up 2 bytes off
+a 4-byte boundary, and every forwarded packet takes 7 unaligned-access
+traps on MIPS.
+
+Switch the QCA8337 to its 4-byte header (HEADER_CTL 0x98: TYPE_LEN plus a
+16-bit type value, as programmed by the vendor SSDK), so the IP header is
+aligned again. On the wire the header is the type (0xaaaa) followed by the
+usual 2-byte header, between the source MAC and the EtherType.
+
+Ethernet management frames keep the 2-byte layout, so register and MIB
+access stays on MDIO.
+
+Routed TCP, QCA8337 port to GSWIP port, single stream: 175 -> 317 Mbit/s
+(GRO on, RPS on), 321 -> 406 Mbit/s (GRO off, RPS off). No unaligned
+traps remain on this path.
+
+Signed-off-by: Gregory Dymarek <gregd72002@gmail.com>
+---
+diff --git a/include/linux/dsa/tag_qca.h b/include/linux/dsa/tag_qca.h
+index ee65745..f8c3e4f 100644
+--- a/include/linux/dsa/tag_qca.h
++++ b/include/linux/dsa/tag_qca.h
+@@ -11,6 +11,14 @@ struct sk_buff;
+ #define QCA_HDR_LEN	2
+ #define QCA_HDR_VERSION	0x2
+ 
++/* 4-byte header mode: a 16-bit header type precedes the 2-byte header. It
++ * keeps the IP header 4-byte aligned behind a conduit that itself adds an
++ * 8-byte tag (e.g. Lantiq GSWIP).
++ */
++#define QCA_HDR_TYPE_LEN	2
++#define QCA_HDR_TYPE_VAL	0xaaaa
++#define QCA_HDR_4B_LEN		(QCA_HDR_TYPE_LEN + QCA_HDR_LEN)
++
+ #define QCA_HDR_RECV_VERSION		GENMASK(15, 14)
+ #define QCA_HDR_RECV_PRIORITY		GENMASK(13, 11)
+ #define QCA_HDR_RECV_TYPE		GENMASK(10, 6)
+diff --git a/drivers/net/dsa/qca/qca8k.h b/drivers/net/dsa/qca/qca8k.h
+index 4451520..7c00106 100644
+--- a/drivers/net/dsa/qca/qca8k.h
++++ b/drivers/net/dsa/qca/qca8k.h
+@@ -149,6 +149,9 @@
+ #define   QCA8K_PORT_STATUS_LINK_AUTO			BIT(9)
+ #define   QCA8K_PORT_STATUS_LINK_PAUSE			BIT(10)
+ #define   QCA8K_PORT_STATUS_FLOW_AUTO			BIT(12)
++#define QCA8K_REG_HEADER_CTRL				0x098
++#define   QCA8K_HEADER_CTRL_TYPE_LEN			BIT(16)
++#define   QCA8K_HEADER_CTRL_TYPE_VAL			GENMASK(15, 0)
+ #define QCA8K_REG_PORT_HDR_CTRL(_i)			(0x9c + (_i * 4))
+ #define   QCA8K_PORT_HDR_CTRL_RX_MASK			GENMASK(3, 2)
+ #define   QCA8K_PORT_HDR_CTRL_TX_MASK			GENMASK(1, 0)
+diff --git a/drivers/net/dsa/qca/qca8k-8xxx.c b/drivers/net/dsa/qca/qca8k-8xxx.c
+index c213898..dec8831 100644
+--- a/drivers/net/dsa/qca/qca8k-8xxx.c
++++ b/drivers/net/dsa/qca/qca8k-8xxx.c
+@@ -1880,7 +1880,10 @@ qca8k_conduit_change(struct dsa_switch *ds, const struct net_device *conduit,
+ 	mutex_lock(&priv->mgmt_eth_data.mutex);
+ 	mutex_lock(&priv->mib_eth_data.mutex);
+ 
+-	priv->mgmt_conduit = operational ? (struct net_device *)conduit : NULL;
++	/* Ethernet mgmt frames still use the 2-byte header layout, so keep
++	 * register and MIB access on MDIO while the 4-byte header is in use.
++	 */
++	priv->mgmt_conduit = NULL;
+ 
+ 	mutex_unlock(&priv->mib_eth_data.mutex);
+ 	mutex_unlock(&priv->mgmt_eth_data.mutex);
+@@ -2012,6 +2015,15 @@ qca8k_setup(struct dsa_switch *ds)
+ 	dsa_switch_for_each_user_port(dp, ds)
+ 		qca8k_port_set_status(priv, dp->index, 0);
+ 
++	/* Use the 4-byte header (type + header), matching tag_qca */
++	ret = qca8k_write(priv, QCA8K_REG_HEADER_CTRL,
++			  QCA8K_HEADER_CTRL_TYPE_LEN |
++			  FIELD_PREP(QCA8K_HEADER_CTRL_TYPE_VAL, QCA_HDR_TYPE_VAL));
++	if (ret) {
++		dev_err(priv->dev, "failed enabling 4-byte QCA header");
++		return ret;
++	}
++
+ 	/* Enable QCA header mode on all cpu ports */
+ 	dsa_switch_for_each_cpu_port(dp, ds) {
+ 		ret = qca8k_write(priv, QCA8K_REG_PORT_HDR_CTRL(dp->index),
+diff --git a/net/dsa/tag_qca.c b/net/dsa/tag_qca.c
+index 0cf6128..d3ff495 100644
+--- a/net/dsa/tag_qca.c
++++ b/net/dsa/tag_qca.c
+@@ -18,9 +18,9 @@ static struct sk_buff *qca_tag_xmit(struct sk_buff *skb, struct net_device *dev)
+ 	__be16 *phdr;
+ 	u16 hdr;
+ 
+-	skb_push(skb, QCA_HDR_LEN);
++	skb_push(skb, QCA_HDR_4B_LEN);
+ 
+-	dsa_alloc_etype_header(skb, QCA_HDR_LEN);
++	dsa_alloc_etype_header(skb, QCA_HDR_4B_LEN);
+ 	phdr = dsa_etype_header_pos_tx(skb);
+ 
+ 	/* Set the version field, and set destination port information */
+@@ -28,7 +28,8 @@ static struct sk_buff *qca_tag_xmit(struct sk_buff *skb, struct net_device *dev)
+ 	hdr |= QCA_HDR_XMIT_FROM_CPU;
+ 	hdr |= FIELD_PREP(QCA_HDR_XMIT_DP_BIT, BIT(dp->index));
+ 
+-	*phdr = htons(hdr);
++	phdr[0] = htons(QCA_HDR_TYPE_VAL);
++	phdr[1] = htons(hdr);
+ 
+ 	return skb;
+ }
+@@ -47,10 +48,15 @@ static struct sk_buff *qca_tag_rcv(struct sk_buff *skb, struct net_device *dev)
+ 
+ 	tagger_data = ds->tagger_data;
+ 
+-	if (unlikely(!pskb_may_pull(skb, QCA_HDR_LEN)))
++	if (unlikely(!pskb_may_pull(skb, QCA_HDR_4B_LEN)))
+ 		return NULL;
+ 
+ 	phdr = dsa_etype_header_pos_rx(skb);
++
++	if (unlikely(ntohs(phdr[0]) != QCA_HDR_TYPE_VAL))
++		return NULL;
++
++	phdr++;
+ 	hdr = ntohs(*phdr);
+ 
+ 	/* Make sure the version is correct */
+@@ -83,8 +89,8 @@ static struct sk_buff *qca_tag_rcv(struct sk_buff *skb, struct net_device *dev)
+ 		return NULL;
+ 
+ 	/* Remove QCA tag and recalculate checksum */
+-	skb_pull_rcsum(skb, QCA_HDR_LEN);
+-	dsa_strip_etype_header(skb, QCA_HDR_LEN);
++	skb_pull_rcsum(skb, QCA_HDR_4B_LEN);
++	dsa_strip_etype_header(skb, QCA_HDR_4B_LEN);
+ 
+ 	return skb;
+ }
+@@ -115,7 +121,7 @@ static const struct dsa_device_ops qca_netdev_ops = {
+ 	.disconnect = qca_tag_disconnect,
+ 	.xmit	= qca_tag_xmit,
+ 	.rcv	= qca_tag_rcv,
+-	.needed_headroom = QCA_HDR_LEN,
++	.needed_headroom = QCA_HDR_4B_LEN,
+ 	.promisc_on_conduit = true,
+ };
+ 
